@@ -3,7 +3,7 @@
 // @namespace   https://github.com/Nuklon
 // @author      Nuklon
 // @license     MIT
-// @version     6.5.5
+// @version     6.5.5.2
 // @description Enhances the Steam Inventory and Steam Market.
 // @include     *://steamcommunity.com/id/*/inventory*
 // @include     *://steamcommunity.com/profiles/*/inventory*
@@ -21,8 +21,8 @@
 // @grant       unsafeWindow
 // @homepageURL https://github.com/Nuklon/Steam-Economy-Enhancer
 // @supportURL  https://github.com/Nuklon/Steam-Economy-Enhancer/issues
-// @downloadURL https://raw.githubusercontent.com/Nuklon/Steam-Economy-Enhancer/master/code.user.js
-// @updateURL   https://raw.githubusercontent.com/Nuklon/Steam-Economy-Enhancer/master/code.user.js
+// @downloadURL https://raw.githubusercontent.com/vadash/Steam-Economy-Enhancer/master/code.user.js
+// @updateURL   https://raw.githubusercontent.com/vadash/Steam-Economy-Enhancer/master/code.user.js
 // ==/UserScript==
 // jQuery is already added by Steam, force no conflict mode.
 (function($, async) {
@@ -285,28 +285,44 @@
         var shouldIgnoreLowestListingOnLowQuantity = getSettingWithDefault(SETTING_PRICE_IGNORE_LOWEST_Q) == 1;
 
         if (shouldIgnoreLowestListingOnLowQuantity && histogram.sell_order_graph.length >= 2) {
-            var listingPrice2ndLowest = market.getPriceBeforeFees(histogram.sell_order_graph[1][0] * 100);
-
-            if (listingPrice2ndLowest > listingPrice) {
-                var numberOfListingsLowest = histogram.sell_order_graph[0][1];
-                var numberOfListings2ndLowest = histogram.sell_order_graph[1][1];
+            for (var i=0; i<histogram.sell_order_graph.length-1; i++) {
+                var listingPriceLowest = market.getPriceBeforeFees(histogram.sell_order_graph[i][0] * 100);
+                var listingPrice2ndLowest = market.getPriceBeforeFees(histogram.sell_order_graph[i+1][0] * 100);
+                var numberOfListingsLowest = histogram.sell_order_graph[i][1];
+                var numberOfListings2ndLowest = histogram.sell_order_graph[i+1][1];
 
                 var percentageLower = (100 * (numberOfListingsLowest / numberOfListings2ndLowest));
+                var percentagePriceLower = (100 * (listingPriceLowest / listingPrice2ndLowest));
+
+                //--- price gap check
+                if (percentagePriceLower <= 90 && listingPrice2ndLowest<=100) {
+                    continue;
+                } else if (percentagePriceLower <= 94 && listingPrice2ndLowest>100 && listingPrice2ndLowest<=200) {
+                    continue;
+                } else if (percentagePriceLower <= 95 && listingPrice2ndLowest>200 && listingPrice2ndLowest<=300) {
+                    continue;
+                } else if (percentagePriceLower <= 96 && listingPrice2ndLowest>300 && listingPrice2ndLowest<=500) {
+                    continue;
+                } else if (percentagePriceLower <= 97 && listingPrice2ndLowest>500) {
+                    continue;
+                }
 
                 // The percentage should change based on the quantity (for example, 1200 listings vs 5, or 1 vs 25).
                 if (numberOfListings2ndLowest >= 1000 && percentageLower <= 5) {
-                    listingPrice = listingPrice2ndLowest;
+                    continue;
                 } else if (numberOfListings2ndLowest < 1000 && percentageLower <= 10) {
-                    listingPrice = listingPrice2ndLowest;
+                    continue;
                 } else if (numberOfListings2ndLowest < 100 && percentageLower <= 15) {
-                    listingPrice = listingPrice2ndLowest;
+                    continue;
                 } else if (numberOfListings2ndLowest < 50 && percentageLower <= 20) {
-                    listingPrice = listingPrice2ndLowest;
+                    continue;
                 } else if (numberOfListings2ndLowest < 25 && percentageLower <= 25) {
-                    listingPrice = listingPrice2ndLowest;
+                    continue;
                 } else if (numberOfListings2ndLowest < 10 && percentageLower <= 30) {
-                    listingPrice = listingPrice2ndLowest;
+                    continue;
                 }
+                listingPrice = listingPriceLowest;
+                break;
             }
         }
 
@@ -822,7 +838,7 @@
             previousName = name;
             name = name.replace('?', '%3F')
                 .replace('#', '%23')
-                .replace('	', '%09');
+                .replace('  ', '%09');
         }
         return name;
     }
